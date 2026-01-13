@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Index-Personal</title>
+    <title>My Workspace V2.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     
     <style>
@@ -17,9 +17,9 @@
 
         body {
             font-family: 'Inter', system-ui, sans-serif;
-            background-color: #000; /* 默认黑色背景，防止闪瞎眼 */
+            background-color: #000;
             overflow: hidden;
-            user-select: none;
+            user-select: none; /* 禁止选中文本，提升APP质感 */
         }
 
         .glass-panel {
@@ -30,6 +30,7 @@
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
         }
 
+        /* 右键菜单动画 */
         #ctx-menu {
             transform-origin: top left;
             animation: menuFade 0.1s ease-out;
@@ -53,34 +54,37 @@
 
         .bento-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
-            gap: 20px;
-            width: 100%;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 24px;
             padding-bottom: 100px;
         }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        #app-loader { transition: opacity 0.5s; pointer-events: none; }
+        #app-loader { transition: opacity 0.5s; }
     </style>
 </head>
-<body class="w-screen h-screen flex flex-col items-center justify-center text-white" oncontextmenu="return false;">
+<body class="w-screen h-screen flex flex-col items-center text-white" oncontextmenu="return false;">
 
     <script>
         const USER_CONFIG = {
-            // 备用壁纸，防止 Bing 挂掉
             fallbackWallpaper: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=3840',
             defaultShortcuts: [
-                { id: '1', title: 'Google', url: 'https://www.google.com', icon: '' },
-                { id: '2', title: 'YouTube', url: 'https://www.youtube.com', icon: '' }
+                { id: '1', title: 'Google', url: 'https://www.google.com' },
+                { id: '2', title: 'YouTube', url: 'https://www.youtube.com' },
+                { id: '3', title: 'ChatGPT', url: 'https://chat.openai.com' },
+                { id: '4', title: 'GitHub', url: 'https://github.com' },
+                { id: '5', title: 'DeepSeek', url: 'https://chat.deepseek.com/' },
+                { id: '6', title: 'Gmail', url: 'https://mail.google.com' },
+                { id: '7', title: 'Bilibili', url: 'https://www.bilibili.com' },
+                { id: '8', title: 'Claude', url: 'https://claude.ai' }
             ]
         };
     </script>
-
     <div id="wallpaper" class="wallpaper-layer"></div>
     <div id="overlay" class="absolute inset-0 bg-black/40 transition-colors duration-500"></div>
 
     <div id="app-loader" class="fixed inset-0 z-50 bg-black flex items-center justify-center">
-        <div class="animate-pulse font-mono text-sm text-gray-400 tracking-widest">SYSTEM INITIALIZING...</div>
+        <div class="animate-pulse font-mono text-sm text-gray-400">SYSTEM READY</div>
     </div>
 
     <div id="ctx-menu" class="fixed hidden z-[100] w-48 bg-[#1a1a1a]/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl py-1.5 overflow-hidden">
@@ -96,91 +100,67 @@
         </button>
     </div>
 
-    <div id="main-container" class="relative z-10 w-full max-w-5xl px-6 flex flex-col items-center h-full pt-[15vh] transition-opacity duration-700">
+    <div id="main-container" class="relative z-10 w-full max-w-4xl px-6 flex flex-col h-full pt-[15vh] opacity-0 transition-opacity duration-700">
         
-        <div class="mb-10 text-center">
-            <h1 id="clock-time" class="text-7xl font-light tracking-tighter text-white/95 font-[Inter] drop-shadow-2xl">00:00</h1>
-            <p id="clock-date" class="text-lg text-white/60 font-mono mt-2 tracking-wide">LOADING...</p>
+        <div class="mb-8 pl-2">
+            <h1 id="clock-time" class="text-6xl font-light tracking-tighter text-white/90 font-[Inter]">00:00</h1>
+            <p id="clock-date" class="text-lg text-white/50 font-mono mt-1">LOADING...</p>
         </div>
 
-        <div class="w-full max-w-2xl glass-panel rounded-full h-[68px] px-6 flex items-center mb-12 group focus-within:bg-white/10 transition-all shadow-2xl border border-white/10 hover:border-white/20">
-            <img src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png" alt="Google" class="h-6 mr-4 opacity-70 group-focus-within:opacity-100 hidden sm:block transition-opacity filter grayscale group-hover:grayscale-0 group-focus-within:grayscale-0">
-            <input type="text" id="search-input" class="flex-1 bg-transparent text-xl outline-none text-white placeholder-white/30 h-full font-light" placeholder="Search..." autocomplete="off" autofocus>
-            
-            <div class="flex items-center space-x-2 ml-3 border-l border-white/10 pl-3">
-                <button onclick="app.doSearch('standard')" class="p-2 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors" title="Search">
-                    <i data-lucide="search" class="w-5 h-5"></i>
-                </button>
+        <div class="glass-panel rounded-full h-[64px] px-5 flex items-center mb-12 group focus-within:bg-white/10 transition-all shadow-2xl">
+            <img src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png" alt="Google" class="h-6 mr-4 opacity-80 group-focus-within:opacity-100 hidden sm:block transition-opacity">
+            <input type="text" id="search-input" class="flex-1 bg-transparent text-xl outline-none text-white placeholder-white/30 h-full font-light" placeholder="Google Search..." autocomplete="off" autofocus>
+            <div class="flex items-center space-x-1 ml-3 border-l border-white/10 pl-3">
+                <button onclick="app.triggerLens()" class="p-2.5 hover:bg-white/10 rounded-full text-white/50 hover:text-blue-400 transition-colors tooltip"><i data-lucide="camera" class="w-5 h-5"></i></button>
+                <button onclick="app.doSearch('standard')" class="p-2.5 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors"><i data-lucide="search" class="w-5 h-5"></i></button>
+                <button onclick="app.doSearch('ai')" class="p-2.5 hover:bg-white/10 rounded-full text-purple-400/80 hover:text-purple-400 hover:scale-110 transition-all"><i data-lucide="wand-2" class="w-5 h-5"></i></button>
+                <button onclick="app.doSearch('gemini')" class="p-2.5 hover:bg-white/10 rounded-full text-blue-400/80 hover:text-blue-400 hover:scale-110 transition-all"><i data-lucide="sparkles" class="w-5 h-5"></i></button>
             </div>
         </div>
 
-        <div id="shortcut-grid" class="bento-grid overflow-y-auto no-scrollbar max-h-[50vh] p-2 w-full max-w-4xl"></div>
+        <div id="shortcut-grid" class="bento-grid overflow-y-auto no-scrollbar max-h-[50vh] p-2"></div>
     </div>
 
-    <div class="fixed bottom-8 right-8 z-20 flex space-x-3">
-        <button onclick="app.exportData()" class="glass-panel p-3.5 rounded-full hover:bg-white/10 hover-scale text-white/60 hover:text-white transition-colors"><i data-lucide="download" class="w-5 h-5"></i></button>
-        <button onclick="app.importData()" class="glass-panel p-3.5 rounded-full hover:bg-white/10 hover-scale text-white/60 hover:text-white transition-colors"><i data-lucide="upload" class="w-5 h-5"></i></button>
-        <button onclick="app.toggleSettings()" class="glass-panel p-3.5 rounded-full hover:bg-white/10 hover-scale text-white/80 hover:text-white transition-colors"><i data-lucide="settings-2" class="w-5 h-5"></i></button>
+    <div class="fixed bottom-6 right-6 z-20 flex space-x-3">
+        <button onclick="app.exportData()" class="glass-panel p-3 rounded-full hover:bg-white/10 hover-scale text-white/60"><i data-lucide="download" class="w-5 h-5"></i></button>
+        <button onclick="app.importData()" class="glass-panel p-3 rounded-full hover:bg-white/10 hover-scale text-white/60"><i data-lucide="upload" class="w-5 h-5"></i></button>
+        <button onclick="app.toggleSettings()" class="glass-panel p-3 rounded-full hover:bg-white/10 hover-scale"><i data-lucide="settings-2" class="w-5 h-5"></i></button>
     </div>
 
     <input type="file" id="import-file" class="hidden" accept=".json" onchange="app.handleImport(this)">
+    <form id="lens-form" action="https://www.google.com/searchbyimage/upload" method="POST" enctype="multipart/form-data" target="_blank" class="hidden">
+        <input type="file" name="encoded_image" id="lens-input" accept="image/*" onchange="this.form.submit()">
+        <input type="hidden" name="sbisrc" value="4">
+    </form>
 
     <div id="settings-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center">
         <div class="glass-panel w-96 rounded-3xl p-6 animate-[fadeIn_0.2s_ease-out]">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-semibold flex items-center gap-2"><i data-lucide="sliders" class="w-4 h-4"></i> Appearance</h2>
-                <button onclick="app.toggleSettings()" class="text-white/50 hover:text-white transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
-            </div>
-            <div class="space-y-8">
-                <div>
-                    <div class="flex justify-between mb-2">
-                        <label class="text-xs font-bold text-white/40 uppercase tracking-widest">Blur Strength</label>
-                        <span id="blur-val" class="text-xs text-white/40 font-mono"></span>
-                    </div>
-                    <input type="range" min="0" max="50" step="1" id="blur-range" class="w-full accent-white bg-white/10 h-1.5 rounded-full appearance-none cursor-pointer hover:bg-white/20">
-                </div>
-                <div>
-                    <div class="flex justify-between mb-2">
-                        <label class="text-xs font-bold text-white/40 uppercase tracking-widest">Overlay Opacity</label>
-                        <span id="opacity-val" class="text-xs text-white/40 font-mono"></span>
-                    </div>
-                    <input type="range" min="0" max="90" step="1" id="opacity-range" class="w-full accent-white bg-white/10 h-1.5 rounded-full appearance-none cursor-pointer hover:bg-white/20">
-                </div>
-                <div class="pt-6 border-t border-white/10">
-                    <button onclick="app.resetData()" class="w-full py-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl hover:bg-red-500/20 hover:text-red-300 text-sm font-medium transition-all">Factory Reset</button>
-                </div>
+            <div class="flex justify-between items-center mb-6"><h2 class="text-lg font-semibold">Settings</h2><button onclick="app.toggleSettings()" class="text-white/50 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+            <div class="space-y-6">
+                <div><label class="text-xs font-bold text-white/40 uppercase tracking-widest mb-2 block">Blur</label><input type="range" min="0" max="50" step="1" id="blur-range" class="w-full accent-white bg-white/20 h-1 rounded-full appearance-none"></div>
+                <div><label class="text-xs font-bold text-white/40 uppercase tracking-widest mb-2 block">Overlay</label><input type="range" min="0" max="90" step="1" id="opacity-range" class="w-full accent-white bg-white/20 h-1 rounded-full appearance-none"></div>
+                <div class="pt-4 border-t border-white/10"><button onclick="app.resetData()" class="w-full py-3 bg-red-500/20 text-red-300 rounded-xl hover:bg-red-500/30 text-sm font-medium transition-colors">Factory Reset</button></div>
             </div>
         </div>
     </div>
 
     <div id="edit-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center">
-        <div class="glass-panel w-full max-w-md rounded-3xl p-8 transform transition-all shadow-2xl border border-white/10">
-            <h2 id="modal-title" class="text-xl font-bold mb-6 text-center">Edit Shortcut</h2>
+        <div class="glass-panel w-full max-w-md rounded-3xl p-8 transform transition-all">
+            <h2 id="modal-title" class="text-xl font-bold mb-6">Edit Shortcut</h2>
             <div class="space-y-4">
-                <div>
-                    <label class="text-xs text-white/40 font-bold ml-1 mb-1 block">TITLE</label>
-                    <input id="edit-title" placeholder="e.g. Google" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 outline-none focus:border-white/30 focus:bg-white/10 transition-colors text-white">
-                </div>
-                <div>
-                    <label class="text-xs text-white/40 font-bold ml-1 mb-1 block">URL</label>
-                    <input id="edit-url" placeholder="e.g. google.com" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 outline-none focus:border-white/30 focus:bg-white/10 transition-colors text-white font-mono text-sm">
-                </div>
-                <div>
-                    <label class="text-xs text-white/40 font-bold ml-1 mb-1 block">CUSTOM LOGO URL (Optional)</label>
-                    <input id="edit-icon" placeholder="https://example.com/logo.png" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 outline-none focus:border-white/30 focus:bg-white/10 transition-colors text-white font-mono text-sm">
-                </div>
+                <input id="edit-title" placeholder="Name" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/40 transition-colors">
+                <input id="edit-url" placeholder="URL" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-white/40 transition-colors">
             </div>
             <div class="flex space-x-3 mt-8">
-                <button onclick="app.closeEditModal()" class="flex-1 py-3.5 bg-white/5 hover:bg-white/10 rounded-xl text-white/60 transition-colors font-medium">Cancel</button>
-                <button onclick="app.saveShortcut()" class="flex-1 py-3.5 bg-white text-black font-bold rounded-xl hover:scale-[1.02] hover:shadow-lg transition-all">Save Changes</button>
+                <button onclick="app.closeEditModal()" class="flex-1 py-3 bg-white/5 hover:bg-white/10 rounded-xl text-white/60 transition-colors">Cancel</button>
+                <button onclick="app.saveShortcut()" class="flex-1 py-3 bg-white text-black font-bold rounded-xl hover:scale-[1.02] transition-transform">Save</button>
             </div>
         </div>
     </div>
 
     <script>
         const App = function() {
-            let shortcuts = [], config = { blur: 24, opacity: 40 }, editingId = null;
-            
+            let shortcuts = [], config = { blur: 10, opacity: 40 }, editingId = null;
             const els = {
                 grid: document.getElementById('shortcut-grid'),
                 wallpaper: document.getElementById('wallpaper'),
@@ -192,31 +172,14 @@
             };
 
             const init = async () => {
-                try {
-                    loadData();
-                    // 即使壁纸失败，也要保证页面能跑
-                    try { await loadWallpaper(); } catch(e) { console.error("Wallpaper failed", e); }
-                    
-                    renderGrid();
-                    setupTime();
-                    setupListeners();
-                    applyStyles();
-                    
-                    // 尝试加载图标，如果 CDN 挂了这里会报错
-                    if (window.lucide) {
-                        lucide.createIcons();
-                    } else {
-                        console.warn('Lucide icons not loaded');
-                    }
-                } catch (err) {
-                    console.error("Critical Init Error:", err);
-                    alert("System Init Failed: Check Console (F12)");
-                } finally {
-                    // 无论成功失败，必须移除遮罩
-                    els.loader.style.opacity = '0';
-                    setTimeout(() => els.loader.remove(), 500);
-                    els.input.focus();
-                }
+                loadData();
+                await loadWallpaper();
+                renderGrid();
+                setupTime();
+                setupListeners();
+                applyStyles();
+                setTimeout(() => { els.loader.style.opacity = '0'; setTimeout(() => els.loader.remove(), 500); els.container.style.opacity = '1'; els.container.style.transform = 'translateY(0)'; }, 300);
+                lucide.createIcons();
             };
 
             const loadData = () => {
@@ -234,92 +197,63 @@
             };
 
             const loadWallpaper = async (forceRefresh = false) => {
-                const STORAGE_KEY = 'v2_wallpaper_cache';
-                const todayStr = new Date().toDateString(); 
-                
-                let cache = null;
-                try { cache = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch(e) {}
-
-                if (!forceRefresh && cache && cache.date === todayStr && cache.url) {
-                    els.wallpaper.style.backgroundImage = `url(${cache.url})`;
-                    return true;
-                }
-
                 try {
-                    // 设置 3 秒超时，防止白屏等待
-                    const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 3000);
-
+                    // 添加时间戳防止缓存
                     const ts = forceRefresh ? `&t=${Date.now()}` : '';
-                    const res = await fetch(`https://bing.biturl.top/?resolution=3840&format=json&index=0&mkt=zh-CN${ts}`, { signal: controller.signal });
-                    clearTimeout(timeoutId);
-
+                    const res = await fetch(`https://bing.biturl.top/?resolution=3840&format=json&index=0&mkt=zh-CN${ts}`);
                     const data = await res.json();
-                    
                     els.wallpaper.style.backgroundImage = `url(${data.url})`;
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify({ url: data.url, date: todayStr }));
                 } catch (e) {
-                    console.warn("Wallpaper fetch failed/timeout, using fallback.");
                     els.wallpaper.style.backgroundImage = `url(${USER_CONFIG.fallbackWallpaper})`;
                 }
             };
 
             const renderGrid = () => {
                 els.grid.innerHTML = '';
+                // [V2.2 变更] 移除了 addBtn 
                 shortcuts.forEach(item => {
                     const card = document.createElement('div');
-                    card.className = 'glass-panel rounded-2xl p-4 flex flex-col items-center justify-center min-h-[120px] relative group hover-scale transition-all cursor-pointer border-transparent hover:border-white/20';
-                    
-                    let autoIcon = '';
-                    try { autoIcon = `https://www.google.com/s2/favicons?domain=${new URL(item.url).hostname}&sz=128`; } catch(e) {}
-                    const displayIcon = item.icon && item.icon.trim() !== '' ? item.icon : autoIcon;
-                    const fallbackIcon = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.title)}&background=random&color=fff&size=128`;
-
+                    card.className = 'glass-panel rounded-2xl p-4 flex flex-col items-center justify-center min-h-[120px] relative group hover-scale transition-all cursor-pointer';
+                    const iconUrl = `https://www.google.com/s2/favicons?domain=${new URL(item.url).hostname}&sz=128`;
                     card.innerHTML = `
-                        <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-20">
-                            <button class="p-1.5 bg-black/60 rounded-md hover:bg-blue-500/80 text-white backdrop-blur-sm transition-colors" onclick="event.stopPropagation(); app.openEditModal('${item.id}')"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
-                            <button class="p-1.5 bg-black/60 rounded-md hover:bg-red-500/80 text-white backdrop-blur-sm transition-colors" onclick="event.stopPropagation(); app.deleteShortcut('${item.id}')"><i data-lucide="trash" class="w-3 h-3"></i></button>
+                        <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 z-20">
+                            <button class="p-1 bg-black/50 rounded hover:bg-blue-500 text-white" onclick="event.stopPropagation(); app.openEditModal('${item.id}')"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+                            <button class="p-1 bg-black/50 rounded hover:bg-red-500 text-white" onclick="event.stopPropagation(); app.deleteShortcut('${item.id}')"><i data-lucide="trash" class="w-3 h-3"></i></button>
                         </div>
-                        <img src="${displayIcon}" 
-                             class="w-10 h-10 mb-4 rounded-xl shadow-lg object-contain bg-black/20 group-hover:scale-110 transition-transform duration-300" 
-                             onerror="this.onerror=null; this.src='${fallbackIcon}'">
-                        <span class="text-xs font-medium text-white/80 truncate w-full text-center tracking-wide group-hover:text-white transition-colors">${item.title}</span>
+                        <img src="${iconUrl}" class="w-10 h-10 mb-3 rounded-md shadow-lg" onerror="this.src='https://ui-avatars.com/api/?name=${item.title}&background=random'">
+                        <span class="text-sm font-medium text-white/90 truncate w-full text-center">${item.title}</span>
                     `;
                     card.onclick = () => window.location.href = item.url;
                     els.grid.appendChild(card);
                 });
-                if(window.lucide) lucide.createIcons();
+                lucide.createIcons();
             };
 
             const setupListeners = () => {
                 els.input.addEventListener('keypress', (e) => { if (e.key === 'Enter') doSearch('standard'); });
-                
-                document.getElementById('blur-range').addEventListener('input', (e) => { 
-                    config.blur = e.target.value; 
-                    applyStyles(); 
-                    localStorage.setItem('v2_config', JSON.stringify(config)); 
-                });
+                document.getElementById('blur-range').addEventListener('input', (e) => { config.blur = e.target.value; applyStyles(); localStorage.setItem('v2_config', JSON.stringify(config)); });
+                document.getElementById('opacity-range').addEventListener('input', (e) => { config.opacity = e.target.value; applyStyles(); localStorage.setItem('v2_config', JSON.stringify(config)); });
 
-                document.getElementById('opacity-range').addEventListener('input', (e) => { 
-                    config.opacity = e.target.value; 
-                    applyStyles(); 
-                    localStorage.setItem('v2_config', JSON.stringify(config)); 
-                });
-
+                // [V2.2 新增] 右键菜单逻辑
                 document.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    els.ctxMenu.style.left = `${e.clientX}px`;
-                    els.ctxMenu.style.top = `${e.clientY}px`;
+                    e.preventDefault(); // 屏蔽系统默认菜单
+                    const { clientX: x, clientY: y } = e;
+                    els.ctxMenu.style.left = `${x}px`;
+                    els.ctxMenu.style.top = `${y}px`;
                     els.ctxMenu.classList.remove('hidden');
                 });
                 
+                // 点击任意处关闭右键菜单
                 document.addEventListener('click', () => els.ctxMenu.classList.add('hidden'));
+                // 按ESC关闭菜单
                 document.addEventListener('keydown', (e) => { if(e.key === 'Escape') els.ctxMenu.classList.add('hidden'); });
             };
 
             const doSearch = (type) => {
                 const q = els.input.value.trim(), eq = encodeURIComponent(q);
-                window.location.href = q ? `https://www.google.com/search?q=${eq}` : `https://www.google.com`;
+                if (type === 'gemini') window.location.href = q ? `https://gemini.google.com/app?q=${eq}` : `https://gemini.google.com/app`;
+                else if (type === 'ai') window.location.href = q ? `https://www.google.com/search?q=${eq}&newwindow=1&udm=50` : `https://www.google.com`;
+                else window.location.href = q ? `https://www.google.com/search?q=${eq}` : `https://www.google.com`;
             };
 
             const applyStyles = () => {
@@ -327,8 +261,6 @@
                 els.overlay.style.backgroundColor = `rgba(0,0,0,${config.opacity / 100})`;
                 document.getElementById('blur-range').value = config.blur;
                 document.getElementById('opacity-range').value = config.opacity;
-                document.getElementById('blur-val').innerText = config.blur + 'px';
-                document.getElementById('opacity-val').innerText = config.opacity + '%';
             };
 
             const setupTime = () => {
@@ -345,57 +277,34 @@
                 const item = id ? shortcuts.find(s => s.id === id) : null;
                 document.getElementById('edit-title').value = item ? item.title : '';
                 document.getElementById('edit-url').value = item ? item.url : '';
-                document.getElementById('edit-icon').value = item ? (item.icon || '') : '';
-                document.getElementById('modal-title').innerText = item ? 'Edit Shortcut' : 'Add New Shortcut';
+                document.getElementById('modal-title').innerText = item ? 'Edit Shortcut' : 'New Shortcut';
                 document.getElementById('edit-modal').classList.remove('hidden');
+                document.getElementById('edit-title').focus();
             };
 
             return {
                 init, doSearch, loadWallpaper,
-                toggleSettings: () => { 
-                    const modal = document.getElementById('settings-modal');
-                    modal.classList.toggle('hidden'); 
-                    if(!modal.classList.contains('hidden')) applyStyles(); 
-                },
+                toggleSettings: () => { document.getElementById('settings-modal').classList.toggle('hidden'); if(!document.getElementById('settings-modal').classList.contains('hidden')) applyStyles(); },
                 openEditModal, 
                 closeEditModal: () => { document.getElementById('edit-modal').classList.add('hidden'); editingId = null; },
                 saveShortcut: () => {
-                    const title = document.getElementById('edit-title').value.trim();
-                    let url = document.getElementById('edit-url').value.trim();
-                    const icon = document.getElementById('edit-icon').value.trim();
+                    const title = document.getElementById('edit-title').value;
+                    let url = document.getElementById('edit-url').value;
                     if (!title || !url) return;
                     if (!url.startsWith('http')) url = 'https://' + url;
-                    
-                    if (editingId) {
-                        const idx = shortcuts.findIndex(s => s.id === editingId);
-                        if(idx !== -1) shortcuts[idx] = { ...shortcuts[idx], title, url, icon };
-                    } else {
-                        shortcuts.push({ id: Date.now().toString(), title, url, icon });
-                    }
+                    if (editingId) shortcuts[shortcuts.findIndex(s => s.id === editingId)] = { ...shortcuts.find(s=>s.id===editingId), title, url };
+                    else shortcuts.push({ id: Date.now().toString(), title, url });
                     saveData(); document.getElementById('edit-modal').classList.add('hidden');
                 },
-                deleteShortcut: (id) => { 
-                    if(confirm('Delete shortcut?')) { shortcuts = shortcuts.filter(s => s.id !== id); saveData(); } 
-                },
-                resetData: () => { if(confirm('Factory Reset?')) { localStorage.clear(); location.reload(); } },
-                exportData: () => { 
-                    const blob = new Blob([JSON.stringify({ shortcuts, config }, null, 2)], {type: 'application/json'});
-                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'backup.json'; a.click(); 
-                },
+                deleteShortcut: (id) => { if(confirm('Delete?')) { shortcuts = shortcuts.filter(s => s.id !== id); saveData(); } },
+                triggerLens: () => document.getElementById('lens-input').click(),
+                resetData: () => { if(confirm('Reset?')) { localStorage.clear(); location.reload(); } },
+                exportData: () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify({ shortcuts, config })], {type: 'application/json'})); a.download = `backup-${new Date().toISOString().slice(0,10)}.json`; a.click(); },
                 importData: () => document.getElementById('import-file').click(),
-                handleImport: (input) => { 
-                    const r = new FileReader(); 
-                    r.onload = (e) => { try { 
-                        const d = JSON.parse(e.target.result); 
-                        if(d.shortcuts) localStorage.setItem('v2_shortcuts', JSON.stringify(d.shortcuts)); 
-                        if(d.config) localStorage.setItem('v2_config', JSON.stringify(d.config)); 
-                        location.reload(); 
-                    } catch (err) { alert('Invalid backup'); } }; 
-                    if(input.files[0]) r.readAsText(input.files[0]); 
-                }
+                handleImport: (input) => { const r = new FileReader(); r.onload = (e) => { try { const d = JSON.parse(e.target.result); if(d.shortcuts) localStorage.setItem('v2_shortcuts', JSON.stringify(d.shortcuts)); if(d.config) localStorage.setItem('v2_config', JSON.stringify(d.config)); location.reload(); } catch {} }; if(input.files[0]) r.readAsText(input.files[0]); }
             };
         }();
-        window.onload = App.init;
+        window.app = App; window.onload = App.init;
     </script>
 </body>
 </html>
