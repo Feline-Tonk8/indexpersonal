@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Workspace V2.2</title>
+    <title>Index-Personal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
@@ -19,7 +19,7 @@
             font-family: 'Inter', system-ui, sans-serif;
             background-color: #000;
             overflow: hidden;
-            user-select: none; /* 禁止选中文本，提升APP质感 */
+            user-select: none; 
         }
 
         .glass-panel {
@@ -30,7 +30,6 @@
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
         }
 
-        /* 右键菜单动画 */
         #ctx-menu {
             transform-origin: top left;
             animation: menuFade 0.1s ease-out;
@@ -71,12 +70,6 @@
             defaultShortcuts: [
                 { id: '1', title: 'Google', url: 'https://www.google.com' },
                 { id: '2', title: 'YouTube', url: 'https://www.youtube.com' },
-                { id: '3', title: 'ChatGPT', url: 'https://chat.openai.com' },
-                { id: '4', title: 'GitHub', url: 'https://github.com' },
-                { id: '5', title: 'DeepSeek', url: 'https://chat.deepseek.com/' },
-                { id: '6', title: 'Gmail', url: 'https://mail.google.com' },
-                { id: '7', title: 'Bilibili', url: 'https://www.bilibili.com' },
-                { id: '8', title: 'Claude', url: 'https://claude.ai' }
             ]
         };
     </script>
