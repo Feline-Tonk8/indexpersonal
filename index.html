@@ -1,261 +1,455 @@
-<script>
-    const App = function() {
-        let shortcuts = [], config = { blur: 24, opacity: 40 }, editingId = null;
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Index-Personal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-blur: 24px;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: #000;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(var(--glass-blur));
+            -webkit-backdrop-filter: blur(var(--glass-blur));
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        /* 动画与交互 */
+        #ctx-menu {
+            transform-origin: top left;
+            animation: menuFade 0.1s ease-out;
+        }
+        @keyframes menuFade {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .wallpaper-layer {
+            position: absolute;
+            inset: -20px;
+            background-size: cover;
+            background-position: center;
+            z-index: -1;
+            transition: filter 0.5s ease;
+        }
+
+        .hover-scale { transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+        .hover-scale:active { transform: scale(0.95); }
+
+        /* 网格布局 */
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 20px;
+            width: 100%;
+            padding-bottom: 100px;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        #app-loader { transition: opacity 0.5s; }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col items-center justify-center text-white" oncontextmenu="return false;">
+
+    <script>
+        const USER_CONFIG = {
+            fallbackWallpaper: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=3840',
+            defaultShortcuts: [
+                { id: '1', title: 'YouTube', url: 'https://www.youtube.com', icon: '' },
+            ]
+        };
+    </script>
+
+    <div id="wallpaper" class="wallpaper-layer"></div>
+    <div id="overlay" class="absolute inset-0 bg-black/40 transition-colors duration-500"></div>
+
+    <div id="app-loader" class="fixed inset-0 z-50 bg-black flex items-center justify-center">
+        <div class="animate-pulse font-mono text-sm text-gray-400 tracking-widest">SYSTEM READY</div>
+    </div>
+
+    <div id="ctx-menu" class="fixed hidden z-[100] w-48 bg-[#1a1a1a]/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl py-1.5 overflow-hidden">
+        <button onclick="app.openEditModal()" class="w-full text-left px-4 py-2.5 text-sm text-white/80 hover:bg-white/10 hover:text-white flex items-center gap-3 transition-colors">
+            <i data-lucide="plus" class="w-4 h-4"></i> Add Shortcut
+        </button>
+        <button onclick="app.loadWallpaper(true)" class="w-full text-left px-4 py-2.5 text-sm text-white/80 hover:bg-white/10 hover:text-white flex items-center gap-3 transition-colors">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh Wallpaper
+        </button>
+        <div class="h-px bg-white/10 my-1 mx-2"></div>
+        <button onclick="app.toggleSettings()" class="w-full text-left px-4 py-2.5 text-sm text-white/80 hover:bg-white/10 hover:text-white flex items-center gap-3 transition-colors">
+            <i data-lucide="settings-2" class="w-4 h-4"></i> Settings
+        </button>
+    </div>
+
+    <div id="main-container" class="relative z-10 w-full max-w-5xl px-6 flex flex-col items-center h-full pt-[15vh] opacity-0 transition-opacity duration-700">
         
-        const els = {
-            grid: document.getElementById('shortcut-grid'),
-            wallpaper: document.getElementById('wallpaper'),
-            overlay: document.getElementById('overlay'),
-            input: document.getElementById('search-input'),
-            loader: document.getElementById('app-loader'),
-            container: document.getElementById('main-container'),
-            ctxMenu: document.getElementById('ctx-menu')
-        };
+        <div class="mb-10 text-center">
+            <h1 id="clock-time" class="text-7xl font-light tracking-tighter text-white/95 font-[Inter] drop-shadow-2xl">00:00</h1>
+            <p id="clock-date" class="text-lg text-white/60 font-mono mt-2 tracking-wide">LOADING...</p>
+        </div>
 
-        const init = async () => {
-            loadData();
-            // 优先尝试加载缓存壁纸，返回 boolean 标识是否命中缓存
-            const hitCache = await loadWallpaper(); 
+        <div class="w-full max-w-2xl glass-panel rounded-full h-[68px] px-6 flex items-center mb-12 group focus-within:bg-white/10 transition-all shadow-2xl border border-white/10 hover:border-white/20">
+            <img src="https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_92x30dp.png" alt="Google" class="h-6 mr-4 opacity-70 group-focus-within:opacity-100 hidden sm:block transition-opacity filter grayscale group-hover:grayscale-0 group-focus-within:grayscale-0">
+            <input type="text" id="search-input" class="flex-1 bg-transparent text-xl outline-none text-white placeholder-white/30 h-full font-light" placeholder="Search anything..." autocomplete="off" autofocus>
             
-            renderGrid();
-            setupTime();
-            setupListeners();
-            applyStyles();
-            
-            lucide.createIcons();
+            <div class="flex items-center space-x-2 ml-3 border-l border-white/10 pl-3">
+                <button onclick="app.triggerLens()" class="p-2 hover:bg-white/10 rounded-full text-white/50 hover:text-blue-400 transition-colors tooltip" title="Google Lens">
+                    <i data-lucide="camera" class="w-5 h-5"></i>
+                </button>
+                <button onclick="app.doSearch('standard')" class="p-2 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors" title="Google Search">
+                    <i data-lucide="search" class="w-5 h-5"></i>
+                </button>
+                <button onclick="app.doSearch('gemini')" class="p-2 hover:bg-white/10 rounded-full text-blue-400/80 hover:text-blue-400 hover:scale-110 transition-all" title="Ask Gemini">
+                    <i data-lucide="sparkles" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
 
-            // 如果命中缓存，立即移除 Loader，消除等待感
-            // 如果未命中（正在请求API），保留原有的过渡动画
-            const delay = hitCache ? 0 : 300;
-            
-            setTimeout(() => { 
-                els.loader.style.opacity = '0'; 
-                setTimeout(() => els.loader.remove(), hitCache ? 0 : 500); 
-                els.container.style.opacity = '1'; 
-                els.container.style.transform = 'translateY(0)'; 
-                
-                // 聚焦输入框
-                els.input.focus();
-            }, delay);
-        };
+        <div id="shortcut-grid" class="bento-grid overflow-y-auto no-scrollbar max-h-[50vh] p-2 w-full max-w-4xl"></div>
+    </div>
 
-        const loadData = () => {
-            const s = localStorage.getItem('v2_shortcuts');
-            const c = localStorage.getItem('v2_config');
-            shortcuts = s ? JSON.parse(s) : USER_CONFIG.defaultShortcuts;
-            config = c ? JSON.parse(c) : config;
-        };
+    <div class="fixed bottom-8 right-8 z-20 flex space-x-3">
+        <button onclick="app.exportData()" class="glass-panel p-3.5 rounded-full hover:bg-white/10 hover-scale text-white/60 hover:text-white transition-colors" title="Export Data"><i data-lucide="download" class="w-5 h-5"></i></button>
+        <button onclick="app.importData()" class="glass-panel p-3.5 rounded-full hover:bg-white/10 hover-scale text-white/60 hover:text-white transition-colors" title="Import Data"><i data-lucide="upload" class="w-5 h-5"></i></button>
+        <button onclick="app.toggleSettings()" class="glass-panel p-3.5 rounded-full hover:bg-white/10 hover-scale text-white/80 hover:text-white transition-colors" title="Settings"><i data-lucide="settings-2" class="w-5 h-5"></i></button>
+    </div>
 
-        const saveData = () => {
-            localStorage.setItem('v2_shortcuts', JSON.stringify(shortcuts));
-            localStorage.setItem('v2_config', JSON.stringify(config));
-            renderGrid();
-            applyStyles();
-        };
+    <input type="file" id="import-file" class="hidden" accept=".json" onchange="app.handleImport(this)">
+    <form id="lens-form" action="https://www.google.com/searchbyimage/upload" method="POST" enctype="multipart/form-data" target="_blank" class="hidden">
+        <input type="file" name="encoded_image" id="lens-input" accept="image/*" onchange="this.form.submit()">
+        <input type="hidden" name="sbisrc" value="4">
+    </form>
 
-        // 重构的核心：带缓存机制的壁纸加载
-        const loadWallpaper = async (forceRefresh = false) => {
-            const STORAGE_KEY = 'v2_wallpaper_cache';
-            const todayStr = new Date().toDateString(); // 例如 "Mon Jan 12 2026"
-            
-            // 1. 尝试读取缓存
-            let cache = null;
-            try {
-                cache = JSON.parse(localStorage.getItem(STORAGE_KEY));
-            } catch(e) {}
-
-            // 2. 缓存命中逻辑：非强制刷新 && 缓存存在 && 缓存日期是今天
-            if (!forceRefresh && cache && cache.date === todayStr && cache.url) {
-                // 直接使用缓存，无需网络请求
-                els.wallpaper.style.backgroundImage = `url(${cache.url})`;
-                console.log('Wallpaper: Cache Hit');
-                return true; // 返回 true 表示命中缓存
-            }
-
-            // 3. 缓存失效或强制刷新，发起网络请求
-            console.log('Wallpaper: Network Request');
-            try {
-                const ts = forceRefresh ? `&t=${Date.now()}` : '';
-                const res = await fetch(`https://bing.biturl.top/?resolution=3840&format=json&index=0&mkt=zh-CN${ts}`);
-                const data = await res.json();
-                
-                // 图片预加载，防止只有 URL 但图片未下载时的闪烁
-                return new Promise((resolve) => {
-                    const img = new Image();
-                    img.src = data.url;
-                    img.onload = () => {
-                        els.wallpaper.style.backgroundImage = `url(${data.url})`;
-                        // 写入缓存
-                        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-                            url: data.url,
-                            date: todayStr
-                        }));
-                        resolve(false); // 返回 false 表示未命中（走了网络）
-                    };
-                    img.onerror = () => {
-                        useFallback();
-                        resolve(false);
-                    };
-                });
-            } catch (e) {
-                useFallback();
-                return false;
-            }
-        };
-
-        const useFallback = () => {
-            els.wallpaper.style.backgroundImage = `url(${USER_CONFIG.fallbackWallpaper})`;
-        };
-
-        // --- 以下逻辑保持不变 ---
-        const renderGrid = () => {
-            els.grid.innerHTML = '';
-            shortcuts.forEach(item => {
-                const card = document.createElement('div');
-                card.className = 'glass-panel rounded-2xl p-4 flex flex-col items-center justify-center min-h-[120px] relative group hover-scale transition-all cursor-pointer border-transparent hover:border-white/20';
-                const iconUrl = `https://www.google.com/s2/favicons?domain=${new URL(item.url).hostname}&sz=128`;
-                
-                card.innerHTML = `
-                    <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-20">
-                        <button class="p-1.5 bg-black/60 rounded-md hover:bg-blue-500/80 text-white backdrop-blur-sm transition-colors" onclick="event.stopPropagation(); app.openEditModal('${item.id}')"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
-                        <button class="p-1.5 bg-black/60 rounded-md hover:bg-red-500/80 text-white backdrop-blur-sm transition-colors" onclick="event.stopPropagation(); app.deleteShortcut('${item.id}')"><i data-lucide="trash" class="w-3 h-3"></i></button>
+    <div id="settings-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center">
+        <div class="glass-panel w-96 rounded-3xl p-6 animate-[fadeIn_0.2s_ease-out]">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-semibold flex items-center gap-2"><i data-lucide="sliders" class="w-4 h-4"></i> Appearance</h2>
+                <button onclick="app.toggleSettings()" class="text-white/50 hover:text-white transition-colors"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <div class="space-y-8">
+                <div>
+                    <div class="flex justify-between mb-2">
+                        <label class="text-xs font-bold text-white/40 uppercase tracking-widest">Blur Strength</label>
+                        <span id="blur-val" class="text-xs text-white/40 font-mono"></span>
                     </div>
-                    <img src="${iconUrl}" class="w-10 h-10 mb-4 rounded-xl shadow-lg group-hover:scale-110 transition-transform duration-300" onerror="this.src='https://ui-avatars.com/api/?name=${item.title}&background=random&color=fff'">
-                    <span class="text-xs font-medium text-white/80 truncate w-full text-center tracking-wide group-hover:text-white transition-colors">${item.title}</span>
-                `;
-                card.onclick = () => window.location.href = item.url;
-                els.grid.appendChild(card);
-            });
-            lucide.createIcons();
-        };
+                    <input type="range" min="0" max="50" step="1" id="blur-range" class="w-full accent-white bg-white/10 h-1.5 rounded-full appearance-none cursor-pointer hover:bg-white/20">
+                </div>
+                <div>
+                    <div class="flex justify-between mb-2">
+                        <label class="text-xs font-bold text-white/40 uppercase tracking-widest">Overlay Opacity</label>
+                        <span id="opacity-val" class="text-xs text-white/40 font-mono"></span>
+                    </div>
+                    <input type="range" min="0" max="90" step="1" id="opacity-range" class="w-full accent-white bg-white/10 h-1.5 rounded-full appearance-none cursor-pointer hover:bg-white/20">
+                </div>
+                <div class="pt-6 border-t border-white/10">
+                    <button onclick="app.resetData()" class="w-full py-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl hover:bg-red-500/20 hover:text-red-300 text-sm font-medium transition-all">Factory Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        const setupListeners = () => {
-            els.input.addEventListener('keypress', (e) => { if (e.key === 'Enter') doSearch('standard'); });
+    <div id="edit-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center">
+        <div class="glass-panel w-full max-w-md rounded-3xl p-8 transform transition-all shadow-2xl border border-white/10">
+            <h2 id="modal-title" class="text-xl font-bold mb-6 text-center">Edit Shortcut</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs text-white/40 font-bold ml-1 mb-1 block">TITLE</label>
+                    <input id="edit-title" placeholder="e.g. Google" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 outline-none focus:border-white/30 focus:bg-white/10 transition-colors text-white">
+                </div>
+                <div>
+                    <label class="text-xs text-white/40 font-bold ml-1 mb-1 block">URL</label>
+                    <input id="edit-url" placeholder="e.g. google.com" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 outline-none focus:border-white/30 focus:bg-white/10 transition-colors text-white font-mono text-sm">
+                </div>
+                <div>
+                    <label class="text-xs text-white/40 font-bold ml-1 mb-1 block">CUSTOM LOGO URL (Optional)</label>
+                    <input id="edit-icon" placeholder="https://example.com/logo.png" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 outline-none focus:border-white/30 focus:bg-white/10 transition-colors text-white font-mono text-sm">
+                </div>
+            </div>
+            <div class="flex space-x-3 mt-8">
+                <button onclick="app.closeEditModal()" class="flex-1 py-3.5 bg-white/5 hover:bg-white/10 rounded-xl text-white/60 transition-colors font-medium">Cancel</button>
+                <button onclick="app.saveShortcut()" class="flex-1 py-3.5 bg-white text-black font-bold rounded-xl hover:scale-[1.02] hover:shadow-lg transition-all">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const App = function() {
+            let shortcuts = [], config = { blur: 24, opacity: 40 }, editingId = null;
             
-            const blurRange = document.getElementById('blur-range');
-            const opacityRange = document.getElementById('opacity-range');
-
-            blurRange.addEventListener('input', (e) => { 
-                config.blur = e.target.value; 
-                applyStyles(); 
-                localStorage.setItem('v2_config', JSON.stringify(config)); 
-            });
-
-            opacityRange.addEventListener('input', (e) => { 
-                config.opacity = e.target.value; 
-                applyStyles(); 
-                localStorage.setItem('v2_config', JSON.stringify(config)); 
-            });
-
-            document.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                const { clientX: x, clientY: y } = e;
-                const menuWidth = 192; 
-                const menuHeight = 150;
-                
-                let finalX = x;
-                let finalY = y;
-                
-                if (x + menuWidth > window.innerWidth) finalX = window.innerWidth - menuWidth - 10;
-                if (y + menuHeight > window.innerHeight) finalY = window.innerHeight - menuHeight - 10;
-
-                els.ctxMenu.style.left = `${finalX}px`;
-                els.ctxMenu.style.top = `${finalY}px`;
-                els.ctxMenu.classList.remove('hidden');
-            });
-            
-            document.addEventListener('click', () => els.ctxMenu.classList.add('hidden'));
-            document.addEventListener('keydown', (e) => { if(e.key === 'Escape') els.ctxMenu.classList.add('hidden'); });
-        };
-
-        const doSearch = (type) => {
-            const q = els.input.value.trim(), eq = encodeURIComponent(q);
-            if (type === 'gemini') window.location.href = q ? `https://gemini.google.com/app?q=${eq}` : `https://gemini.google.com/app`;
-            else if (type === 'ai') window.location.href = q ? `https://www.google.com/search?q=${eq}&newwindow=1&udm=14` : `https://www.google.com`; 
-            else window.location.href = q ? `https://www.google.com/search?q=${eq}` : `https://www.google.com`;
-        };
-
-        const applyStyles = () => {
-            document.documentElement.style.setProperty('--glass-blur', `${config.blur}px`);
-            els.overlay.style.backgroundColor = `rgba(0,0,0,${config.opacity / 100})`;
-            document.getElementById('blur-range').value = config.blur;
-            document.getElementById('opacity-range').value = config.opacity;
-            document.getElementById('blur-val').innerText = config.blur + 'px';
-            document.getElementById('opacity-val').innerText = config.opacity + '%';
-        };
-
-        const setupTime = () => {
-            const update = () => {
-                const now = new Date();
-                document.getElementById('clock-time').innerText = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
-                document.getElementById('clock-date').innerText = now.toLocaleDateString('zh-CN', { weekday: 'long', month: 'long', day: 'numeric' });
+            const els = {
+                grid: document.getElementById('shortcut-grid'),
+                wallpaper: document.getElementById('wallpaper'),
+                overlay: document.getElementById('overlay'),
+                input: document.getElementById('search-input'),
+                loader: document.getElementById('app-loader'),
+                container: document.getElementById('main-container'),
+                ctxMenu: document.getElementById('ctx-menu')
             };
-            update(); setInterval(update, 1000);
-        };
 
-        const openEditModal = (id = null) => {
-            editingId = id;
-            const item = id ? shortcuts.find(s => s.id === id) : null;
-            document.getElementById('edit-title').value = item ? item.title : '';
-            document.getElementById('edit-url').value = item ? item.url : '';
-            document.getElementById('modal-title').innerText = item ? 'Edit Shortcut' : 'Add New Shortcut';
-            document.getElementById('edit-modal').classList.remove('hidden');
-            setTimeout(() => document.getElementById('edit-title').focus(), 100);
-        };
-
-        return {
-            init, doSearch, loadWallpaper,
-            toggleSettings: () => { 
-                const modal = document.getElementById('settings-modal');
-                modal.classList.toggle('hidden'); 
-                if(!modal.classList.contains('hidden')) applyStyles(); 
-            },
-            openEditModal, 
-            closeEditModal: () => { document.getElementById('edit-modal').classList.add('hidden'); editingId = null; },
-            saveShortcut: () => {
-                const title = document.getElementById('edit-title').value.trim();
-                let url = document.getElementById('edit-url').value.trim();
-                if (!title || !url) return;
-                if (!url.startsWith('http')) url = 'https://' + url;
+            const init = async () => {
+                loadData();
+                // 优先尝试加载缓存壁纸
+                const hitCache = await loadWallpaper(); 
                 
-                if (editingId) {
-                    const idx = shortcuts.findIndex(s => s.id === editingId);
-                    if(idx !== -1) shortcuts[idx] = { ...shortcuts[idx], title, url };
-                } else {
-                    shortcuts.push({ id: Date.now().toString(), title, url });
+                renderGrid();
+                setupTime();
+                setupListeners();
+                applyStyles();
+                
+                lucide.createIcons();
+
+                // 缓存命中则0延迟移除Loader，否则等待300ms过渡
+                const delay = hitCache ? 0 : 300;
+                setTimeout(() => { 
+                    els.loader.style.opacity = '0'; 
+                    setTimeout(() => els.loader.remove(), hitCache ? 0 : 500); 
+                    els.container.style.opacity = '1'; 
+                    els.container.style.transform = 'translateY(0)'; 
+                    els.input.focus();
+                }, delay);
+            };
+
+            const loadData = () => {
+                const s = localStorage.getItem('v2_shortcuts');
+                const c = localStorage.getItem('v2_config');
+                shortcuts = s ? JSON.parse(s) : USER_CONFIG.defaultShortcuts;
+                config = c ? JSON.parse(c) : config;
+            };
+
+            const saveData = () => {
+                localStorage.setItem('v2_shortcuts', JSON.stringify(shortcuts));
+                localStorage.setItem('v2_config', JSON.stringify(config));
+                renderGrid();
+                applyStyles();
+            };
+
+            // 壁纸加载逻辑：缓存 -> API
+            const loadWallpaper = async (forceRefresh = false) => {
+                const STORAGE_KEY = 'v2_wallpaper_cache';
+                const todayStr = new Date().toDateString(); 
+                
+                let cache = null;
+                try { cache = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch(e) {}
+
+                // 命中缓存：非强制且日期匹配
+                if (!forceRefresh && cache && cache.date === todayStr && cache.url) {
+                    els.wallpaper.style.backgroundImage = `url(${cache.url})`;
+                    console.log('Wallpaper: Cache Hit');
+                    return true;
                 }
-                saveData(); document.getElementById('edit-modal').classList.add('hidden');
-            },
-            deleteShortcut: (id) => { 
-                if(confirm('Are you sure you want to delete this shortcut?')) { 
-                    shortcuts = shortcuts.filter(s => s.id !== id); 
+
+                // 未命中：请求 API
+                console.log('Wallpaper: Network Request');
+                try {
+                    const ts = forceRefresh ? `&t=${Date.now()}` : '';
+                    const res = await fetch(`https://bing.biturl.top/?resolution=3840&format=json&index=0&mkt=zh-CN${ts}`);
+                    const data = await res.json();
+                    
+                    return new Promise((resolve) => {
+                        const img = new Image();
+                        img.src = data.url;
+                        img.onload = () => {
+                            els.wallpaper.style.backgroundImage = `url(${data.url})`;
+                            localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                                url: data.url,
+                                date: todayStr
+                            }));
+                            resolve(false); 
+                        };
+                        img.onerror = () => { useFallback(); resolve(false); };
+                    });
+                } catch (e) { useFallback(); return false; }
+            };
+
+            const useFallback = () => {
+                els.wallpaper.style.backgroundImage = `url(${USER_CONFIG.fallbackWallpaper})`;
+            };
+
+            // 渲染网格：三级图标降级策略
+            const renderGrid = () => {
+                els.grid.innerHTML = '';
+                shortcuts.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'glass-panel rounded-2xl p-4 flex flex-col items-center justify-center min-h-[120px] relative group hover-scale transition-all cursor-pointer border-transparent hover:border-white/20';
+                    
+                    // 1. 获取自动图标 (Google API)
+                    let autoIcon = '';
+                    try { autoIcon = `https://www.google.com/s2/favicons?domain=${new URL(item.url).hostname}&sz=128`; } catch(e) {}
+
+                    // 2. 优先使用用户自定义，否则用自动
+                    const displayIcon = item.icon && item.icon.trim() !== '' ? item.icon : autoIcon;
+                    
+                    // 3. 最终Fallback: UI Avatars (首字母)
+                    const fallbackIcon = `https://ui-avatars.com/api/?name=${encodeURIComponent(item.title)}&background=random&color=fff&size=128`;
+
+                    card.innerHTML = `
+                        <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 z-20">
+                            <button class="p-1.5 bg-black/60 rounded-md hover:bg-blue-500/80 text-white backdrop-blur-sm transition-colors" onclick="event.stopPropagation(); app.openEditModal('${item.id}')"><i data-lucide="edit-2" class="w-3 h-3"></i></button>
+                            <button class="p-1.5 bg-black/60 rounded-md hover:bg-red-500/80 text-white backdrop-blur-sm transition-colors" onclick="event.stopPropagation(); app.deleteShortcut('${item.id}')"><i data-lucide="trash" class="w-3 h-3"></i></button>
+                        </div>
+                        <img src="${displayIcon}" 
+                             class="w-10 h-10 mb-4 rounded-xl shadow-lg object-contain bg-black/20 group-hover:scale-110 transition-transform duration-300" 
+                             onerror="this.onerror=null; this.src='${fallbackIcon}'">
+                        <span class="text-xs font-medium text-white/80 truncate w-full text-center tracking-wide group-hover:text-white transition-colors">${item.title}</span>
+                    `;
+                    card.onclick = () => window.location.href = item.url;
+                    els.grid.appendChild(card);
+                });
+                lucide.createIcons();
+            };
+
+            const setupListeners = () => {
+                els.input.addEventListener('keypress', (e) => { if (e.key === 'Enter') doSearch('standard'); });
+                
+                const blurRange = document.getElementById('blur-range');
+                const opacityRange = document.getElementById('opacity-range');
+
+                blurRange.addEventListener('input', (e) => { 
+                    config.blur = e.target.value; 
+                    applyStyles(); 
+                    localStorage.setItem('v2_config', JSON.stringify(config)); 
+                });
+
+                opacityRange.addEventListener('input', (e) => { 
+                    config.opacity = e.target.value; 
+                    applyStyles(); 
+                    localStorage.setItem('v2_config', JSON.stringify(config)); 
+                });
+
+                document.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    const { clientX: x, clientY: y } = e;
+                    const menuWidth = 192; 
+                    const menuHeight = 150;
+                    
+                    let finalX = x;
+                    let finalY = y;
+                    
+                    if (x + menuWidth > window.innerWidth) finalX = window.innerWidth - menuWidth - 10;
+                    if (y + menuHeight > window.innerHeight) finalY = window.innerHeight - menuHeight - 10;
+
+                    els.ctxMenu.style.left = `${finalX}px`;
+                    els.ctxMenu.style.top = `${finalY}px`;
+                    els.ctxMenu.classList.remove('hidden');
+                });
+                
+                document.addEventListener('click', () => els.ctxMenu.classList.add('hidden'));
+                document.addEventListener('keydown', (e) => { if(e.key === 'Escape') els.ctxMenu.classList.add('hidden'); });
+            };
+
+            const doSearch = (type) => {
+                const q = els.input.value.trim(), eq = encodeURIComponent(q);
+                if (type === 'gemini') window.location.href = q ? `https://gemini.google.com/app?q=${eq}` : `https://gemini.google.com/app`;
+                else if (type === 'ai') window.location.href = q ? `https://www.google.com/search?q=${eq}&newwindow=1&udm=14` : `https://www.google.com`; 
+                else window.location.href = q ? `https://www.google.com/search?q=${eq}` : `https://www.google.com`;
+            };
+
+            const applyStyles = () => {
+                document.documentElement.style.setProperty('--glass-blur', `${config.blur}px`);
+                els.overlay.style.backgroundColor = `rgba(0,0,0,${config.opacity / 100})`;
+                document.getElementById('blur-range').value = config.blur;
+                document.getElementById('opacity-range').value = config.opacity;
+                document.getElementById('blur-val').innerText = config.blur + 'px';
+                document.getElementById('opacity-val').innerText = config.opacity + '%';
+            };
+
+            const setupTime = () => {
+                const update = () => {
+                    const now = new Date();
+                    document.getElementById('clock-time').innerText = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+                    document.getElementById('clock-date').innerText = now.toLocaleDateString('zh-CN', { weekday: 'long', month: 'long', day: 'numeric' });
+                };
+                update(); setInterval(update, 1000);
+            };
+
+            const openEditModal = (id = null) => {
+                editingId = id;
+                const item = id ? shortcuts.find(s => s.id === id) : null;
+                document.getElementById('edit-title').value = item ? item.title : '';
+                document.getElementById('edit-url').value = item ? item.url : '';
+                // 填充自定义图标
+                document.getElementById('edit-icon').value = item ? (item.icon || '') : '';
+                
+                document.getElementById('modal-title').innerText = item ? 'Edit Shortcut' : 'Add New Shortcut';
+                document.getElementById('edit-modal').classList.remove('hidden');
+                setTimeout(() => document.getElementById('edit-title').focus(), 100);
+            };
+
+            return {
+                init, doSearch, loadWallpaper,
+                toggleSettings: () => { 
+                    const modal = document.getElementById('settings-modal');
+                    modal.classList.toggle('hidden'); 
+                    if(!modal.classList.contains('hidden')) applyStyles(); 
+                },
+                openEditModal, 
+                closeEditModal: () => { document.getElementById('edit-modal').classList.add('hidden'); editingId = null; },
+                
+                saveShortcut: () => {
+                    const title = document.getElementById('edit-title').value.trim();
+                    let url = document.getElementById('edit-url').value.trim();
+                    const icon = document.getElementById('edit-icon').value.trim(); // 获取自定义图标
+                    
+                    if (!title || !url) return;
+                    if (!url.startsWith('http')) url = 'https://' + url;
+                    
+                    if (editingId) {
+                        const idx = shortcuts.findIndex(s => s.id === editingId);
+                        if(idx !== -1) shortcuts[idx] = { ...shortcuts[idx], title, url, icon };
+                    } else {
+                        shortcuts.push({ id: Date.now().toString(), title, url, icon });
+                    }
                     saveData(); 
-                } 
-            },
-            triggerLens: () => document.getElementById('lens-input').click(),
-            resetData: () => { if(confirm('Factory Reset: This will clear all your shortcuts and settings. Continue?')) { localStorage.clear(); location.reload(); } },
-            exportData: () => { 
-                const dataStr = JSON.stringify({ shortcuts, config }, null, 2);
-                const blob = new Blob([dataStr], {type: 'application/json'});
-                const a = document.createElement('a'); 
-                a.href = URL.createObjectURL(blob); 
-                a.download = `workspace-backup-${new Date().toISOString().slice(0,10)}.json`; 
-                a.click(); 
-            },
-            importData: () => document.getElementById('import-file').click(),
-            handleImport: (input) => { 
-                const r = new FileReader(); 
-                r.onload = (e) => { 
-                    try { 
-                        const d = JSON.parse(e.target.result); 
-                        if(d.shortcuts) localStorage.setItem('v2_shortcuts', JSON.stringify(d.shortcuts)); 
-                        if(d.config) localStorage.setItem('v2_config', JSON.stringify(d.config)); 
-                        location.reload(); 
-                    } catch (err) { alert('Invalid backup file'); } 
-                }; 
-                if(input.files[0]) r.readAsText(input.files[0]); 
-            }
-        };
-    }();
-    window.app = App; window.onload = App.init;
-</script>
+                    document.getElementById('edit-modal').classList.add('hidden');
+                },
+                
+                deleteShortcut: (id) => { 
+                    if(confirm('Are you sure you want to delete this shortcut?')) { 
+                        shortcuts = shortcuts.filter(s => s.id !== id); 
+                        saveData(); 
+                    } 
+                },
+                triggerLens: () => document.getElementById('lens-input').click(),
+                resetData: () => { if(confirm('Factory Reset: This will clear all your shortcuts and settings. Continue?')) { localStorage.clear(); location.reload(); } },
+                exportData: () => { 
+                    const dataStr = JSON.stringify({ shortcuts, config }, null, 2);
+                    const blob = new Blob([dataStr], {type: 'application/json'});
+                    const a = document.createElement('a'); 
+                    a.href = URL.createObjectURL(blob); 
+                    a.download = `workspace-backup-${new Date().toISOString().slice(0,10)}.json`; 
+                    a.click(); 
+                },
+                importData: () => document.getElementById('import-file').click(),
+                handleImport: (input) => { 
+                    const r = new FileReader(); 
+                    r.onload = (e) => { 
+                        try { 
+                            const d = JSON.parse(e.target.result); 
+                            if(d.shortcuts) localStorage.setItem('v2_shortcuts', JSON.stringify(d.shortcuts)); 
+                            if(d.config) localStorage.setItem('v2_config', JSON.stringify(d.config)); 
+                            location.reload(); 
+                        } catch (err) { alert('Invalid backup file'); } 
+                    }; 
+                    if(input.files[0]) r.readAsText(input.files[0]); 
+                }
+            };
+        }();
+        window.app = App; window.onload = App.init;
+    </script>
+</body>
+</html>
